@@ -1,13 +1,13 @@
-terraform {  
-    required_providers {    
-        aws = {      
-            version = ">=3.38.0"
-        }
-        kubectl = {
-
-            source  = "gavinbunney/kubectl"
-        }
-        helm = {}
+terraform {
+  required_providers {
+    aws = {
+      version = ">=3.38.0"
     }
+    kubectl = {
+
+      source = "gavinbunney/kubectl"
+    }
+    helm = {}
+  }
 }
 
