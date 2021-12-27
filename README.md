@@ -1,10 +1,77 @@
 # EKS Karpenter module for AWS
 
-WARNING: Still in progress, so bound to change often! Do not use this in production!
+WARNING: Still in progress, so bound to change often! Do not use this in production (yet)!
 
 ## Description
 
-This is a simple module for creating Karpenter autoscaler deployemnt onto your EKS cluster,
+This is a simple module for creating Karpenter autoscaler deployemnt onto your EKS cluster.
+To deploy Karpemnter you'll need:
+
+- an operational EKS cluster
+- an OIDC provider in your EKS cluster
+- some subnet annotations (please see Karpenter docs)
+- an instance profile used for EKS K8S workers
+
+## Examples
+
+An example using a module `module.k8s` to provision a cluster (https://github.com/mskender/aws-terraform-eks )
+```
+module "k8s" {
+    
+    region = "eu-west-1"
+    source = "github.com/mskender/aws-terraform-eks"
+    cluster_name = local.cluster_name
+    write_kube_config = true
+    kube_config_location = local.kubeconfig_loc
+
+    export_kube_config = false
+    shellrc_file = "~/.customization"
+
+    prefix = local.prefix
+    eks_subnet_ids = module.network.public_subnets.*.id
+}
+
+module "karpenter" {
+    
+install_karpenter = true
+source = "github.com/mskender/aws-terraform-eks-karpenter.git"
+
+cluster_name = "module.k8s.cluster_name"
+cluster_endpoint = module.k8s.cluster_endpoint
+oidc_url = module.k8s.cluster_oidc_url
+
+providers = {
+    helm = helm.eks
+    kubectl = kubectl.eks
+}
+
+ec2_tags = [
+    {
+        key = "Name",
+        value = "${local.cluster_name}-karpenter-worker"
+    }
+]
+instance_types = ["t3.medium"]
+subnet_name_selector = "my-k8s-public*"
+instance_profile_name = "my-k8s-eks-worker-role"
+}
+```
+
+Providers are aliased so the location of kube config file is not checked until eks cluster is created and config dumped via "k8s" module in example above:
+```
+provider kubectl {
+    alias = "eks"
+    config_path = local.kubeconfig_loc
+    
+}
+provider helm {
+
+    alias = "eks"
+    kubernetes{
+        config_path = local.kubeconfig_loc
+    }
+}
+```
 
 ## Requirements
 
@@ -18,7 +85,7 @@ This is a simple module for creating Karpenter autoscaler deployemnt onto your E
 |------|---------|
 | <a name="provider_aws"></a> [aws](#provider\_aws) | >=3.38.0 |
 | <a name="provider_helm"></a> [helm](#provider\_helm) | n/a |
-| <a name="provider_kubernetes"></a> [kubernetes](#provider\_kubernetes) | n/a |
+| <a name="provider_kubectl"></a> [kubectl](#provider\_kubectl) | n/a |
 
 ## Modules
 
@@ -32,7 +99,7 @@ No modules.
 | [aws_iam_role.karpenter_sa_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
 | [aws_iam_role_policy_attachment.karpenter_sa_attachment](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [helm_release.karpenter](https://registry.terraform.io/providers/hashicorp/helm/latest/docs/resources/release) | resource |
-| [kubernetes_manifest.karpenter_provider](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/manifest) | resource |
+| [kubectl_manifest.karpenter_provider](https://registry.terraform.io/providers/gavinbunney/kubectl/latest/docs/resources/manifest) | resource |
 | [aws_caller_identity.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/caller_identity) | data source |
 
 ## Inputs
