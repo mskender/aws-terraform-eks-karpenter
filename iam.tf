@@ -1,7 +1,7 @@
 locals {
   karpenter_assume_role = templatefile("${path.module}/templates/oidc-assume-role.tpl",
     {
-      OIDC_PRINCIPAL = "arn:aws:iam::${local.account_id}:oidc-provider/${var.oidc_url}",
+      OIDC_PRINCIPAL = var.oidc_url == null ? "" : "arn:aws:iam::${local.account_id}:oidc-provider/${var.oidc_url}",
       OIDC_URL       = var.oidc_url
       SA             = "system:serviceaccount:karpenter:karpenter"
     }
